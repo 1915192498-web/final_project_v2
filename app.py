@@ -554,6 +554,39 @@ st.set_page_config(
 
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
+THEMES = {
+    "暗夜紫": {
+        "primary": "#6366f1", "secondary": "#a855f7", "bg": "#0c0a1a",
+        "card": "#16132e", "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
+    },
+    "烈焰红": {
+        "primary": "#ef4444", "secondary": "#f97316", "bg": "#1a0a0a",
+        "card": "#2e1616", "gradient": "linear-gradient(135deg, #ef4444 0%, #f97316 50%, #fbbf24 100%)"
+    },
+    "翡翠绿": {
+        "primary": "#10b981", "secondary": "#06b6d4", "bg": "#0a1a14",
+        "card": "#162e22", "gradient": "linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #22d3ee 100%)"
+    },
+    "星辰蓝": {
+        "primary": "#3b82f6", "secondary": "#8b5cf6", "bg": "#0a0f1a",
+        "card": "#162030", "gradient": "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #a855f7 100%)"
+    },
+    "樱花粉": {
+        "primary": "#ec4899", "secondary": "#f472b6", "bg": "#1a0a14",
+        "card": "#2e1624", "gradient": "linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fbbf24 100%)"
+    },
+}
+
+CHARACTER_CLASSES = {
+    "战士": {"icon": "⚔️", "hp": 120, "attack": 18, "defense": 15, "desc": "近战强者，擅长正面交锋"},
+    "法师": {"icon": "🔮", "hp": 80, "attack": 22, "defense": 8, "desc": "掌控元素之力，擅长远程攻击"},
+    "游侠": {"icon": "🏹", "hp": 90, "attack": 16, "defense": 12, "desc": "敏捷灵活，擅长侦查与暗杀"},
+    "牧师": {"icon": "✝️", "hp": 100, "attack": 10, "defense": 14, "desc": "治愈大师，擅长辅助与治疗"},
+}
+
+if "theme" not in st.session_state:
+    st.session_state.theme = "暗夜紫"
+
 if st.session_state.theme in THEMES:
     t = THEMES[st.session_state.theme]
     st.markdown(f"""
@@ -588,9 +621,6 @@ if "novel_title" not in st.session_state:
 if "game_chain" not in st.session_state:
     st.session_state.game_chain = None
 
-if "theme" not in st.session_state:
-    st.session_state.theme = "暗夜紫"
-
 if "character_created" not in st.session_state:
     st.session_state.character_created = False
 
@@ -602,36 +632,6 @@ if "character_class" not in st.session_state:
 
 if "character_background" not in st.session_state:
     st.session_state.character_background = ""
-
-THEMES = {
-    "暗夜紫": {
-        "primary": "#6366f1", "secondary": "#a855f7", "bg": "#0c0a1a",
-        "card": "#16132e", "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
-    },
-    "烈焰红": {
-        "primary": "#ef4444", "secondary": "#f97316", "bg": "#1a0a0a",
-        "card": "#2e1616", "gradient": "linear-gradient(135deg, #ef4444 0%, #f97316 50%, #fbbf24 100%)"
-    },
-    "翡翠绿": {
-        "primary": "#10b981", "secondary": "#06b6d4", "bg": "#0a1a14",
-        "card": "#162e22", "gradient": "linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #22d3ee 100%)"
-    },
-    "星辰蓝": {
-        "primary": "#3b82f6", "secondary": "#8b5cf6", "bg": "#0a0f1a",
-        "card": "#162030", "gradient": "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #a855f7 100%)"
-    },
-    "樱花粉": {
-        "primary": "#ec4899", "secondary": "#f472b6", "bg": "#1a0a14",
-        "card": "#2e1624", "gradient": "linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fbbf24 100%)"
-    },
-}
-
-CHARACTER_CLASSES = {
-    "战士": {"icon": "⚔️", "hp": 120, "attack": 18, "defense": 15, "desc": "近战强者，擅长正面交锋"},
-    "法师": {"icon": "🔮", "hp": 80, "attack": 22, "defense": 8, "desc": "掌控元素之力，擅长远程攻击"},
-    "游侠": {"icon": "🏹", "hp": 90, "attack": 16, "defense": 12, "desc": "敏捷灵活，擅长侦查与暗杀"},
-    "牧师": {"icon": "✝️", "hp": 100, "attack": 10, "defense": 14, "desc": "治愈大师，擅长辅助与治疗"},
-}
 
 
 def init_game(novel_title: str, char_name: str = "无名", char_class: str = "战士", char_background: str = ""):
