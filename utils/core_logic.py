@@ -9,12 +9,12 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough, RunnableBranch
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+HAS_CHROMA = False
 try:
-    from langchain_community.vectorstores import Chroma
-    from langchain_community.embeddings import DashScopeEmbeddings
+    import chromadb
     HAS_CHROMA = True
-except ImportError:
-    HAS_CHROMA = False
+except Exception:
+    pass
 
 from .tools import ALL_TOOLS
 from . import db_manager
@@ -115,6 +115,7 @@ def get_llm():
 def get_embeddings():
     if not HAS_CHROMA:
         return None
+    from langchain_community.embeddings import DashScopeEmbeddings
     return DashScopeEmbeddings(model="text-embedding-v2")
 
 
@@ -124,6 +125,7 @@ _world_knowledge = {}
 def get_vectorstore(novel_title: str):
     if not HAS_CHROMA:
         return None
+    from langchain_community.vectorstores import Chroma
     persist_dir = os.path.join(CHROMA_DIR, novel_title)
     os.makedirs(persist_dir, exist_ok=True)
     return Chroma(
