@@ -203,15 +203,18 @@ def get_saves_for_session(session_id: int):
 
 
 def get_all_saves():
-    with get_conn() as conn:
-        rows = conn.execute(
-            """SELECT gs.save_id, gs.save_name, gs.created_at, 
-                      gs.session_id, gss.novel_title, gss.hp, gss.current_chapter
-               FROM game_saves gs
-               JOIN game_sessions gss ON gs.session_id = gss.session_id
-               ORDER BY gs.created_at DESC""",
-        ).fetchall()
-        return [dict(r) for r in rows]
+    try:
+        with get_conn() as conn:
+            rows = conn.execute(
+                """SELECT gs.save_id, gs.save_name, gs.created_at, 
+                          gs.session_id, gss.novel_title, gss.hp, gss.current_chapter
+                   FROM game_saves gs
+                   JOIN game_sessions gss ON gs.session_id = gss.session_id
+                   ORDER BY gs.created_at DESC""",
+            ).fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
 
 
 def load_game_snapshot(session_id: int, save_id: int):
