@@ -578,10 +578,18 @@ THEMES = {
 }
 
 CHARACTER_CLASSES = {
-    "战士": {"icon": "⚔️", "hp": 120, "attack": 18, "defense": 15, "desc": "近战强者，擅长正面交锋"},
-    "法师": {"icon": "🔮", "hp": 80, "attack": 22, "defense": 8, "desc": "掌控元素之力，擅长远程攻击"},
-    "游侠": {"icon": "🏹", "hp": 90, "attack": 16, "defense": 12, "desc": "敏捷灵活，擅长侦查与暗杀"},
-    "牧师": {"icon": "✝️", "hp": 100, "attack": 10, "defense": 14, "desc": "治愈大师，擅长辅助与治疗"},
+    "暗影纪元": {
+        "战士": {"icon": "⚔️", "hp": 120, "attack": 18, "defense": 15, "desc": "近战强者，擅长正面交锋"},
+        "法师": {"icon": "🔮", "hp": 80, "attack": 22, "defense": 8, "desc": "掌控元素之力，擅长远程攻击"},
+        "游侠": {"icon": "🏹", "hp": 90, "attack": 16, "defense": 12, "desc": "敏捷灵活，擅长侦查与暗杀"},
+        "牧师": {"icon": "✝️", "hp": 100, "attack": 10, "defense": 14, "desc": "治愈大师，擅长辅助与治疗"},
+    },
+    "仙途": {
+        "剑修": {"icon": "🗡️", "hp": 90, "attack": 20, "defense": 10, "desc": "以剑入道，一剑破万法"},
+        "丹师": {"icon": "💊", "hp": 85, "attack": 12, "defense": 8, "desc": "炼丹大师，擅长辅助与恢复"},
+        "符修": {"icon": "📜", "hp": 75, "attack": 24, "defense": 6, "desc": "符箓之道，远程攻击犀利"},
+        "体修": {"icon": "💪", "hp": 130, "attack": 15, "defense": 18, "desc": "淬炼肉身，近战无敌"},
+    },
 }
 
 if "theme" not in st.session_state:
@@ -635,7 +643,8 @@ if "character_background" not in st.session_state:
 
 
 def init_game(novel_title: str, char_name: str = "无名", char_class: str = "战士", char_background: str = ""):
-    class_info = CHARACTER_CLASSES.get(char_class, CHARACTER_CLASSES["战士"])
+    classes = CHARACTER_CLASSES.get(novel_title, CHARACTER_CLASSES.get("暗影纪元"))
+    class_info = classes.get(char_class, list(classes.values())[0])
     session_id = start_new_game(
         st.session_state.user_id, novel_title,
         char_name=char_name, char_class=char_class,
@@ -709,11 +718,12 @@ with st.sidebar:
         st.markdown('<div class="section-header">👤 创建角色</div>', unsafe_allow_html=True)
 
         char_name = st.text_input("角色名称", value="", placeholder="输入你的角色名")
-        char_class = st.selectbox("选择职业", list(CHARACTER_CLASSES.keys()))
+        char_class = st.selectbox("选择职业", list(CHARACTER_CLASSES.get(st.session_state.novel_title, CHARACTER_CLASSES.get("暗影纪元")).keys()))
         char_background = st.text_area("背景故事（可选）", placeholder="描述你的角色背景...", height=80)
 
         if char_class:
-            info = CHARACTER_CLASSES[char_class]
+            classes = CHARACTER_CLASSES.get(st.session_state.novel_title, CHARACTER_CLASSES.get("暗影纪元"))
+            info = classes[char_class]
             st.markdown(
                 f"""<div style="background:var(--gradient-card);border-radius:10px;padding:0.8rem;border:1px solid var(--border);margin-top:0.5rem">
                     <div style="font-size:1.5rem;text-align:center">{info['icon']}</div>
