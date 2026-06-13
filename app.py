@@ -849,6 +849,39 @@ st.markdown(
 )
 
 if not st.session_state.session_id:
+    all_saves = db_manager.get_all_saves()
+
+    if all_saves:
+        st.markdown(
+            """<div style="text-align:center;padding:0.5rem 0">
+                <p style="font-size:1.1rem;color:var(--accent);font-weight:600">📂 继续上次的冒险</p>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+        for save in all_saves[:10]:
+            col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
+            with col1:
+                st.markdown(f"**{save['save_name']}**")
+            with col2:
+                st.markdown(f"📖 {save['novel_title']} · ❤️ {save['hp']} · Ch.{save['current_chapter']}")
+            with col3:
+                st.caption(save['created_at'][:10])
+            with col4:
+                if st.button("📥", key=f"main_load_{save['save_id']}", help="加载此存档"):
+                    new_session_id = db_manager.create_session(st.session_state.user_id, save['novel_title'])
+                    db_manager.load_game_snapshot(new_session_id, save['save_id'])
+                    st.session_state.session_id = new_session_id
+                    st.session_state.novel_title = save['novel_title']
+                    st.session_state.messages = []
+                    for msg in db_manager.get_chat_history(new_session_id):
+                        st.session_state.messages.append({"role": msg["role"], "content": msg["content"]})
+                    st.session_state.game_chain = build_novel_chain(save['novel_title'])
+                    st.session_state.character_created = True
+                    st.rerun()
+
+        st.markdown('<div class="divider-fancy"></div>', unsafe_allow_html=True)
+
     st.markdown(
         """<div class="empty-state" style="padding:1rem 0 0.5rem 0">
             <p style="font-size:1.3rem;color:var(--primary-light);font-weight:600">🎮 开始你的冒险</p>

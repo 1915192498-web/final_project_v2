@@ -4,7 +4,6 @@ __pycache__/
 .env
 .streamlit/secrets.toml
 data/chroma_db/
-data/*.db
 dist/
 build/
 *.spec
