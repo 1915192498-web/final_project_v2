@@ -800,22 +800,28 @@ with st.sidebar:
 
             st.markdown('<div class="section-header">💾 存档管理</div>', unsafe_allow_html=True)
 
-            saves = db_manager.get_saves_for_session(st.session_state.session_id)
-            if saves:
-                for save in saves:
-                    with st.expander(f"📁 {save['save_name']} ({save['created_at'][:10]})"):
-                        if st.button("📥 加载此存档", key=f"load_{save['save_id']}", use_container_width=True):
-                            db_manager.load_game_snapshot(st.session_state.session_id, save['save_id'])
-                            session = db_manager.get_session(st.session_state.session_id)
-                            st.session_state.messages = []
-                            for msg in db_manager.get_chat_history(st.session_state.session_id):
-                                st.session_state.messages.append({"role": msg["role"], "content": msg["content"]})
-                            st.session_state.game_chain = build_novel_chain(st.session_state.novel_title)
-                            st.rerun()
-                        if st.button("🗑️ 删除存档", key=f"del_{save['save_id']}", use_container_width=True):
-                            with db_manager.get_conn() as conn:
-                                conn.execute("DELETE FROM game_saves WHERE save_id=?", (save['save_id'],))
-                            st.rerun()
+            all_saves = db_manager.get_all_saves()
+            if all_saves:
+                for save in all_saves:
+                    is_current = save['session_id'] == st.session_state.session_id
+                    tag = " 📌当前" if is_current else ""
+                    with st.expander(f"📁 {save['save_name']}{tag} ({save['created_at'][:10]})"):
+                        st.caption(f"📖 {save['novel_title']} · ❤️ {save['hp']} · Ch.{save['current_chapter']}")
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            if not is_current:
+                                if st.button("📥 加载", key=f"load_{save['save_id']}", use_container_width=True):
+                                    db_manager.load_game_snapshot(st.session_state.session_id, save['save_id'])
+                                    st.session_state.messages = []
+                                    for msg in db_manager.get_chat_history(st.session_state.session_id):
+                                        st.session_state.messages.append({"role": msg["role"], "content": msg["content"]})
+                                    st.session_state.game_chain = build_novel_chain(st.session_state.novel_title)
+                                    st.rerun()
+                        with c2:
+                            if st.button("🗑️ 删除", key=f"del_{save['save_id']}", use_container_width=True):
+                                with db_manager.get_conn() as conn:
+                                    conn.execute("DELETE FROM game_saves WHERE save_id=?", (save['save_id'],))
+                                st.rerun()
             else:
                 st.markdown(
                     '<div class="empty-state" style="padding:1rem"><p style="font-size:0.85rem">暂无存档</p></div>',
