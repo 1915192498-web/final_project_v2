@@ -173,4 +173,13 @@ def rest(session_id: int) -> str:
     return f"你找了一处安全的地方休息了一会儿，恢复了 {heal} 点生命值。当前HP: {new_hp}/100"
 
 
-ALL_TOOLS = [push_plot, get_clues, battle, check_status, rest]
+@tool
+def save_game(session_id: int, save_name: str = "手动存档") -> str:
+    """保存当前游戏进度。输入存档名称，返回保存结果。"""
+    result = db_manager.save_game_snapshot(session_id, save_name)
+    if result:
+        return f"游戏进度已保存为「{save_name}」！你可以随时通过存档系统加载这个进度。"
+    return "存档失败，请稍后再试。"
+
+
+ALL_TOOLS = [push_plot, get_clues, battle, check_status, rest, save_game]

@@ -64,6 +64,16 @@ def init_db():
                 FOREIGN KEY (session_id) REFERENCES game_sessions(session_id)
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS game_saves (
+                save_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                save_name TEXT NOT NULL,
+                save_data TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES game_sessions(session_id)
+            )
+        """)
 
 
 def create_user(user_id: str, username: str):
@@ -74,11 +84,11 @@ def create_user(user_id: str, username: str):
         )
 
 
-def create_session(user_id: str, novel_title: str) -> int:
+def create_session(user_id: str, novel_title: str, hp: int = 100, attack: int = 15, defense: int = 10) -> int:
     with get_conn() as conn:
         cursor = conn.execute(
-            "INSERT INTO game_sessions (user_id, novel_title) VALUES (?, ?)",
-            (user_id, novel_title),
+            "INSERT INTO game_sessions (user_id, novel_title, hp, attack, defense) VALUES (?, ?, ?, ?, ?)",
+            (user_id, novel_title, hp, attack, defense),
         )
         return cursor.lastrowid
 
@@ -153,3 +163,74 @@ def get_user_sessions(user_id: str):
             (user_id,),
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+def save_game_snapshot(session_id: int, save_name: str = "自动存档"):
+    with get_conn() as conn:
+        session = dict(conn.execute(
+            "SELECT * FROM game_sessions WHERE session_id = ?", (session_id,)
+        ).fetchone() or {})
+        if not session:
+            return None
+
+        chat_rows = conn.execute(
+            "SELECT role, content FROM chat_history WHERE session_id = ? ORDER BY id", (session_id,)
+        ).fetchall()
+        clue_rows = conn.execute(
+            "SELECT clue_type, clue_content FROM world_clues WHERE session_id = ? ORDER BY id", (session_id,)
+        ).fetchall()
+
+        save_data = json.dumps({
+            "session": session,
+            "chat_history": [dict(r) for r in chat_rows],
+            "clues": [dict(r) for r in clue_rows],
+        }, ensure_ascii=False)
+
+        conn.execute(
+            "INSERT INTO game_saves (session_id, save_name, save_data) VALUES (?, ?, ?)",
+            (session_id, save_name, save_data)
+        )
+        return save_name
+
+
+def get_saves_for_session(session_id: int):
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT save_id, save_name, created_at FROM game_saves WHERE session_id = ? ORDER BY created_at DESC",
+            (session_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def load_game_snapshot(session_id: int, save_id: int):
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT save_data FROM game_saves WHERE save_id = ? AND session_id = ?",
+            (save_id, session_id)
+        ).fetchone()
+        if not row:
+            return None
+
+        data = json.loads(row["save_data"])
+
+        s = data["session"]
+        conn.execute(
+            "UPDATE game_sessions SET hp=?, attack=?, defense=?, current_chapter=?, current_scene=?, inventory=?, flags=? WHERE session_id=?",
+            (s["hp"], s["attack"], s["defense"], s["current_chapter"], s["current_scene"], json.dumps(s.get("inventory", []), ensure_ascii=False), json.dumps(s.get("flags", {}), ensure_ascii=False), session_id)
+        )
+
+        conn.execute("DELETE FROM chat_history WHERE session_id=?", (session_id,))
+        for msg in data.get("chat_history", []):
+            conn.execute(
+                "INSERT INTO chat_history (session_id, role, content) VALUES (?, ?, ?)",
+                (session_id, msg["role"], msg["content"])
+            )
+
+        conn.execute("DELETE FROM world_clues WHERE session_id=?", (session_id,))
+        for clue in data.get("clues", []):
+            conn.execute(
+                "INSERT INTO world_clues (session_id, clue_type, clue_content) VALUES (?, ?, ?)",
+                (session_id, clue["clue_type"], clue["clue_content"])
+            )
+
+        return data

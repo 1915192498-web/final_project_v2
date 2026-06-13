@@ -2,6 +2,7 @@ import streamlit as st
 import uuid
 import sys
 import os
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -12,7 +13,7 @@ db_manager.init_db()
 
 CUSTOM_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Playfair+Display:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Playfair+Display:wght@700&family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&display=swap');
 
 :root {
     --primary: #6366f1;
@@ -485,6 +486,57 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+
+.character-creator {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.08));
+    border-radius: 20px;
+    padding: 2rem;
+    border: 1px solid var(--border);
+    margin: 1rem 0;
+    animation: fadeInUp 0.6s ease;
+}
+
+.class-card {
+    background: var(--gradient-card);
+    border-radius: 14px;
+    padding: 1.2rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.class-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.save-slot {
+    background: var(--gradient-card);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    margin: 0.5rem 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.save-slot:hover {
+    border-color: var(--primary);
+    transform: translateX(4px);
+}
+
+.save-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.3rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
 </style>
 """
 
@@ -502,6 +554,25 @@ st.set_page_config(
 
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
+if st.session_state.theme in THEMES:
+    t = THEMES[st.session_state.theme]
+    st.markdown(f"""
+    <style>
+    :root {{
+        --primary: {t['primary']};
+        --secondary: {t['secondary']};
+        --bg-dark: {t['bg']};
+        --bg-card: {t['card']};
+        --gradient-hero: {t['gradient']};
+    }}
+    .stApp {{ background: {t['bg']} !important; }}
+    .sidebar-brand h2 {{ background: {t['gradient']}; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
+    .hero-title {{ background: {t['gradient']}; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
+    .stat-value {{ background: {t['gradient']}; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
+    .stButton > button {{ background: {t['gradient']} !important; }}
+    </style>
+    """, unsafe_allow_html=True)
+
 if "user_id" not in st.session_state:
     st.session_state.user_id = str(uuid.uuid4())[:8]
 
@@ -517,26 +588,83 @@ if "novel_title" not in st.session_state:
 if "game_chain" not in st.session_state:
     st.session_state.game_chain = None
 
+if "theme" not in st.session_state:
+    st.session_state.theme = "暗夜紫"
 
-def init_game(novel_title: str):
-    session_id = start_new_game(st.session_state.user_id, novel_title)
+if "character_created" not in st.session_state:
+    st.session_state.character_created = False
+
+if "character_name" not in st.session_state:
+    st.session_state.character_name = ""
+
+if "character_class" not in st.session_state:
+    st.session_state.character_class = ""
+
+if "character_background" not in st.session_state:
+    st.session_state.character_background = ""
+
+THEMES = {
+    "暗夜紫": {
+        "primary": "#6366f1", "secondary": "#a855f7", "bg": "#0c0a1a",
+        "card": "#16132e", "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
+    },
+    "烈焰红": {
+        "primary": "#ef4444", "secondary": "#f97316", "bg": "#1a0a0a",
+        "card": "#2e1616", "gradient": "linear-gradient(135deg, #ef4444 0%, #f97316 50%, #fbbf24 100%)"
+    },
+    "翡翠绿": {
+        "primary": "#10b981", "secondary": "#06b6d4", "bg": "#0a1a14",
+        "card": "#162e22", "gradient": "linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #22d3ee 100%)"
+    },
+    "星辰蓝": {
+        "primary": "#3b82f6", "secondary": "#8b5cf6", "bg": "#0a0f1a",
+        "card": "#162030", "gradient": "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #a855f7 100%)"
+    },
+    "樱花粉": {
+        "primary": "#ec4899", "secondary": "#f472b6", "bg": "#1a0a14",
+        "card": "#2e1624", "gradient": "linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fbbf24 100%)"
+    },
+}
+
+CHARACTER_CLASSES = {
+    "战士": {"icon": "⚔️", "hp": 120, "attack": 18, "defense": 15, "desc": "近战强者，擅长正面交锋"},
+    "法师": {"icon": "🔮", "hp": 80, "attack": 22, "defense": 8, "desc": "掌控元素之力，擅长远程攻击"},
+    "游侠": {"icon": "🏹", "hp": 90, "attack": 16, "defense": 12, "desc": "敏捷灵活，擅长侦查与暗杀"},
+    "牧师": {"icon": "✝️", "hp": 100, "attack": 10, "defense": 14, "desc": "治愈大师，擅长辅助与治疗"},
+}
+
+
+def init_game(novel_title: str, char_name: str = "无名", char_class: str = "战士", char_background: str = ""):
+    class_info = CHARACTER_CLASSES.get(char_class, CHARACTER_CLASSES["战士"])
+    session_id = start_new_game(
+        st.session_state.user_id, novel_title,
+        char_name=char_name, char_class=char_class,
+        hp=class_info["hp"], attack=class_info["attack"], defense=class_info["defense"]
+    )
     st.session_state.session_id = session_id
     st.session_state.novel_title = novel_title
     st.session_state.messages = []
     st.session_state.game_chain = build_novel_chain(novel_title)
+    st.session_state.character_created = True
+
+    bg_text = f"\n\n**你的背景故事：**{char_background}" if char_background else ""
 
     intro_msg = (
         f"### 🌟 欢迎来到《{novel_title}》\n\n"
+        f"你是一名 **{char_class}**，名为「{char_name}」。{class_info['desc']}。\n\n"
         "你睁开眼睛，发现自己置身于一个陌生的世界。空气中弥漫着未知的气息...\n\n"
         "---\n\n"
-        "**你现在是一名初入江湖的冒险者。你可以自由行动：**\n\n"
+        f"**角色属性：** HP={class_info['hp']} | 攻击={class_info['attack']} | 防御={class_info['defense']}"
+        f"{bg_text}\n\n"
+        "**你可以自由行动：**\n\n"
         "| 指令 | 说明 |\n"
         "|------|------|\n"
         "| 🗺️ `探索` | 向前探索未知区域 |\n"
         "| 💬 `对话` | 寻找NPC进行对话 |\n"
         "| ⚔️ `战斗` | 寻找敌人进行战斗 |\n"
         "| 🔍 `查看线索` | 了解已收集的信息 |\n"
-        "| 📊 `状态` | 查看角色属性 |\n\n"
+        "| 📊 `状态` | 查看角色属性 |\n"
+        "| 💾 `存档` | 保存当前进度 |\n\n"
         "> 💡 *提示：你可以自由输入任何行动，AI会根据你的选择推进故事。*"
     )
     st.session_state.messages.append({"role": "assistant", "content": intro_msg})
@@ -557,11 +685,48 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="section-header">🌍 选择世界</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">🎨 主题风格</div>', unsafe_allow_html=True)
+    theme_names = list(THEMES.keys())
+    cols = st.columns(5)
+    for i, theme_name in enumerate(theme_names):
+        with cols[i]:
+            if st.button("●", key=f"theme_{theme_name}", help=theme_name,
+                        type="primary" if st.session_state.theme == theme_name else "secondary"):
+                st.session_state.theme = theme_name
+                st.rerun()
 
+    st.markdown('<div class="divider-fancy"></div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-header">🌍 选择世界</div>', unsafe_allow_html=True)
     for title, world_info in NOVEL_WORLDS.items():
         if st.button(f"📖 {title}", key=f"btn_{title}", use_container_width=True):
-            init_game(title)
+            st.session_state.novel_title = title
+            st.session_state.character_created = False
+            st.rerun()
+
+    if st.session_state.novel_title and not st.session_state.character_created:
+        st.markdown('<div class="divider-fancy"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">👤 创建角色</div>', unsafe_allow_html=True)
+
+        char_name = st.text_input("角色名称", value="", placeholder="输入你的角色名")
+        char_class = st.selectbox("选择职业", list(CHARACTER_CLASSES.keys()))
+        char_background = st.text_area("背景故事（可选）", placeholder="描述你的角色背景...", height=80)
+
+        if char_class:
+            info = CHARACTER_CLASSES[char_class]
+            st.markdown(
+                f"""<div style="background:var(--gradient-card);border-radius:10px;padding:0.8rem;border:1px solid var(--border);margin-top:0.5rem">
+                    <div style="font-size:1.5rem;text-align:center">{info['icon']}</div>
+                    <div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;margin-top:0.3rem">{info['desc']}</div>
+                    <div style="text-align:center;color:var(--text-muted);font-size:0.75rem;margin-top:0.3rem">HP:{info['hp']} | ATK:{info['attack']} | DEF:{info['defense']}</div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+
+        if st.button("🎮 开始冒险", use_container_width=True, type="primary"):
+            if not char_name:
+                char_name = "无名"
+            init_game(st.session_state.novel_title, char_name, char_class, char_background)
             st.rerun()
 
     st.markdown('<div class="divider-fancy"></div>', unsafe_allow_html=True)
@@ -621,10 +786,42 @@ with st.sidebar:
                     unsafe_allow_html=True,
                 )
 
+            st.markdown('<div class="divider-fancy"></div>', unsafe_allow_html=True)
+
+            st.markdown('<div class="section-header">💾 存档管理</div>', unsafe_allow_html=True)
+
+            saves = db_manager.get_saves_for_session(st.session_state.session_id)
+            if saves:
+                for save in saves:
+                    with st.expander(f"📁 {save['save_name']} ({save['created_at'][:10]})"):
+                        if st.button("📥 加载此存档", key=f"load_{save['save_id']}", use_container_width=True):
+                            db_manager.load_game_snapshot(st.session_state.session_id, save['save_id'])
+                            session = db_manager.get_session(st.session_state.session_id)
+                            st.session_state.messages = []
+                            for msg in db_manager.get_chat_history(st.session_state.session_id):
+                                st.session_state.messages.append({"role": msg["role"], "content": msg["content"]})
+                            st.session_state.game_chain = build_novel_chain(st.session_state.novel_title)
+                            st.rerun()
+                        if st.button("🗑️ 删除存档", key=f"del_{save['save_id']}", use_container_width=True):
+                            with db_manager.get_conn() as conn:
+                                conn.execute("DELETE FROM game_saves WHERE save_id=?", (save['save_id'],))
+                            st.rerun()
+            else:
+                st.markdown(
+                    '<div class="empty-state" style="padding:1rem"><p style="font-size:0.85rem">暂无存档</p></div>',
+                    unsafe_allow_html=True,
+                )
+
+            if st.button("💾 手动存档", use_container_width=True):
+                save_name = f"存档_{datetime.now().strftime('%m%d_%H%M')}"
+                db_manager.save_game_snapshot(st.session_state.session_id, save_name)
+                st.toast(f"✅ 已保存为「{save_name}」")
+                st.rerun()
+
     st.markdown('<div class="divider-fancy"></div>', unsafe_allow_html=True)
     st.markdown(
         """<div style="text-align:center;color:var(--text-muted);font-size:0.75rem">
-            AI互动小说引擎 v2.0<br>
+            AI互动小说引擎 v3.0<br>
             LangChain + Streamlit
         </div>""",
         unsafe_allow_html=True,
