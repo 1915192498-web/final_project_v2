@@ -3,8 +3,6 @@ langchain
 langchain-openai
 langchain-community
 langchain-text-splitters
-chromadb>=0.5.23
-numpy>=2.0.0
 dashscope
 python-dotenv
 tiktoken

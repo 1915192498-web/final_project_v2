@@ -3,14 +3,18 @@ import json
 from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI
-from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough, RunnableBranch
-from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import TextLoader
+
+try:
+    from langchain_community.vectorstores import Chroma
+    from langchain_community.embeddings import DashScopeEmbeddings
+    HAS_CHROMA = True
+except ImportError:
+    HAS_CHROMA = False
 
 from .tools import ALL_TOOLS
 from . import db_manager
@@ -109,10 +113,17 @@ def get_llm():
 
 
 def get_embeddings():
+    if not HAS_CHROMA:
+        return None
     return DashScopeEmbeddings(model="text-embedding-v2")
 
 
+_world_knowledge = {}
+
+
 def get_vectorstore(novel_title: str):
+    if not HAS_CHROMA:
+        return None
     persist_dir = os.path.join(CHROMA_DIR, novel_title)
     os.makedirs(persist_dir, exist_ok=True)
     return Chroma(
@@ -123,31 +134,45 @@ def get_vectorstore(novel_title: str):
 
 
 def init_world_knowledge(novel_title: str):
-    vs = get_vectorstore(novel_title)
-    if vs._collection.count() > 0:
-        return vs
-
     world = NOVEL_WORLDS.get(novel_title, NOVEL_WORLDS["暗影纪元"])
+
+    if novel_title in _world_knowledge:
+        return _world_knowledge[novel_title]
+
     docs = [world["system_prompt"]]
     for clue in world.get("starting_clues", []):
         docs.append(clue)
-
     characters = CHARACTER_PROFILES.get(novel_title, {})
     for name, desc in characters.items():
         docs.append(f"角色「{name}」: {desc}")
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=20)
-    splits = text_splitter.create_documents(docs)
-    vs.add_documents(splits)
-    return vs
+    if HAS_CHROMA:
+        vs = get_vectorstore(novel_title)
+        if vs and vs._collection.count() > 0:
+            _world_knowledge[novel_title] = vs
+            return vs
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=20)
+        splits = text_splitter.create_documents(docs)
+        vs.add_documents(splits)
+        _world_knowledge[novel_title] = vs
+        return vs
+    else:
+        _world_knowledge[novel_title] = docs
+        return docs
 
 
 def build_rag_retriever(novel_title: str):
-    vs = get_vectorstore(novel_title)
+    init_world_knowledge(novel_title)
 
     def retrieve_context(query: str) -> str:
-        results = vs.similarity_search(query, k=3)
-        return "\n".join([doc.page_content for doc in results])
+        knowledge = _world_knowledge.get(novel_title, [])
+        if isinstance(knowledge, list):
+            return "\n".join(knowledge[:5])
+        try:
+            results = knowledge.similarity_search(query, k=3)
+            return "\n".join([doc.page_content for doc in results])
+        except Exception:
+            return "\n".join([str(d) for d in knowledge[:5]]) if isinstance(knowledge, list) else ""
 
     return retrieve_context
 
