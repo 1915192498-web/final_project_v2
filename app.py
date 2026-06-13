@@ -849,7 +849,10 @@ st.markdown(
 )
 
 if not st.session_state.session_id:
-    all_saves = db_manager.get_all_saves()
+    try:
+        all_saves = db_manager.get_all_saves()
+    except Exception:
+        all_saves = []
 
     if all_saves:
         st.markdown(
