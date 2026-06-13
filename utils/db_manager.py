@@ -220,8 +220,8 @@ def get_all_saves():
 def load_game_snapshot(session_id: int, save_id: int):
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT save_data FROM game_saves WHERE save_id = ? AND session_id = ?",
-            (save_id, session_id)
+            "SELECT save_data FROM game_saves WHERE save_id = ?",
+            (save_id,)
         ).fetchone()
         if not row:
             return None
